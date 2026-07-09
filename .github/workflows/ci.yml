@@ -1,0 +1,46 @@
+name: Rust Workspace CI
+
+# 1. The Triggers: When should this run?
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# 2. Environment Variables
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings" # Fails the build if there are any compiler warnings
+
+# 3. The Jobs
+jobs:
+  test-and-lint:
+    name: Build, Lint, and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step A: Download your code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step B: Install the latest stable Rust compiler
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Step C: Smart Caching (Crucial for fast builds)
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      # Step D: Check Formatting
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      # Step E: Run the Linter (Clippy)
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features
+
+      # Step F: Run all Unit and Integration Tests
+      - name: Run tests
+        run: cargo test --workspace --all-features

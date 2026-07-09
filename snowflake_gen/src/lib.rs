@@ -25,11 +25,13 @@ pub enum SnowflakeError {
 }
 
 // --- 3. State Management ---
+#[derive(Debug)]
 struct SnowflakeState {
     last_timestamp: u64,
     sequence: u64,
 }
 
+#[derive(Debug)]
 pub struct SnowflakeGenerator {
     machine_id: u64,
     // The state is wrapped in a Mutex for thread-safe mutation
@@ -114,5 +116,107 @@ impl SnowflakeGenerator {
             | state.sequence;
 
         Ok(id)
+    }
+}
+
+// --- 5. Test Suite ---
+// The #[cfg(test)] annotation tells the Rust compiler to ONLY compile 
+// this module when you run `cargo test`. It will be ignored in production builds.
+#[cfg(test)]
+mod tests {
+    // Import everything from the outer module (our generator logic)
+    use super::*;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+    use std::thread;
+
+    #[test]
+    fn test_valid_machine_id_initialization() {
+        // 1023 is our MAX_MACHINE_ID
+        let generator = SnowflakeGenerator::new(1023);
+        assert!(generator.is_ok(), "Generator should initialize with valid ID");
+    }
+
+    #[test]
+    fn test_invalid_machine_id_rejection() {
+        // 1024 is out of bounds (requires 11 bits)
+        let generator = SnowflakeGenerator::new(1024);
+        assert_eq!(
+            generator.unwrap_err(),
+            SnowflakeError::MachineIdOutOfBounds,
+            "Generator should reject machine IDs > 1023"
+        );
+    }
+
+    #[test]
+    fn test_sequential_generation_uniqueness() {
+        let generator = SnowflakeGenerator::new(1).expect("Failed to init");
+        let mut generated_ids = HashSet::new();
+
+        // Generate 10,000 IDs in a tight loop
+        for _ in 0..10_000 {
+            let id = generator.generate_id().expect("Generation failed");
+            
+            // HashSet::insert returns false if the value was already present
+            assert!(
+                generated_ids.insert(id),
+                "Duplicate ID generated in sequential loop: {}", id
+            );
+        }
+        
+        assert_eq!(generated_ids.len(), 10_000);
+    }
+
+    #[test]
+    fn test_highly_concurrent_uniqueness() {
+        let generator = Arc::new(SnowflakeGenerator::new(42).unwrap());
+        let mut handles = vec![];
+
+        // Spawn 20 concurrent threads
+        for _ in 0..20 {
+            let gen_clone = Arc::clone(&generator);
+            
+            let handle = thread::spawn(move || {
+                let mut local_ids = vec![];
+                // Each thread generates 1,000 IDs
+                for _ in 0..1_000 {
+                    local_ids.push(gen_clone.generate_id().unwrap());
+                }
+                local_ids
+            });
+            handles.push(handle);
+        }
+
+        // Collect all IDs from all threads into a single HashSet to check for collisions
+        let mut all_ids = HashSet::new();
+        for handle in handles {
+            let local_ids = handle.join().unwrap();
+            for id in local_ids {
+                assert!(
+                    all_ids.insert(id),
+                    "COLLISION DETECTED! Thread safety failed for ID: {}", id
+                );
+            }
+        }
+        
+        // 20 threads * 1,000 IDs = 20,000 unique IDs
+        assert_eq!(all_ids.len(), 20_000);
+    }
+
+    #[test]
+    fn test_machine_id_bitwise_extraction() {
+        let expected_machine_id = 42;
+        let generator = SnowflakeGenerator::new(expected_machine_id).unwrap();
+        let id = generator.generate_id().unwrap();
+
+        // Reverse-engineer the ID: 
+        // Shift right by 12 bits (to remove the sequence), 
+        // then apply a bitmask (1023) to isolate the 10-bit machine ID.
+        let extracted_machine_id = (id >> 12) & 1023;
+
+        assert_eq!(
+            extracted_machine_id, expected_machine_id,
+            "The embedded machine ID must match the initialized value"
+        );
     }
 }
