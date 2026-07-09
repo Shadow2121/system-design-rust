@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "snowflake_gen",
+]
+
+[profile.release]
+opt-level = 3
