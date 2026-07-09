@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use std::thread;
 use std::sync::mpsc;
+use std::thread;
 use std::time::Duration;
 
 // Import our Snowflake Generator from Phase 1
@@ -34,10 +34,10 @@ fn main() {
         for record in rx {
             gapless_counter += 1;
             let invoice_id = format!("INV-{}", gapless_counter);
-            
+
             // Simulate database update latency
             thread::sleep(Duration::from_millis(50));
-            
+
             println!(
                 "[Worker] Assigned Gapless ID: {} to Internal Snowflake ID: {}",
                 invoice_id, record.internal_id
@@ -51,7 +51,7 @@ fn main() {
 
     for thread_id in 0..3 {
         let gen_clone = Arc::clone(&generator);
-        
+
         // Clone the transmitter so multiple threads can send to the same queue
         let tx_clone = tx.clone();
 
@@ -59,19 +59,19 @@ fn main() {
             for order_num in 0..3 {
                 // Instantly generate the internal Snowflake ID
                 let internal_id = gen_clone.generate_id().unwrap();
-                
+
                 println!(
-                    "[Web API {}] Generated Internal ID: {} for Order {}", 
+                    "[Web API {}] Generated Internal ID: {} for Order {}",
                     thread_id, internal_id, order_num
                 );
 
-                // Simulate saving to the DB with a NULL invoice_id, 
+                // Simulate saving to the DB with a NULL invoice_id,
                 // then send it to the background worker via the channel
                 let record = DatabaseRecord {
                     internal_id,
                     data: format!("Order Payload {}", order_num),
                 };
-                
+
                 tx_clone.send(record).unwrap();
             }
         });
@@ -80,7 +80,7 @@ fn main() {
 
     // 4. Clean up
     // We must drop the original transmitter, or the receiver loop will wait forever
-    drop(tx); 
+    drop(tx);
 
     // Wait for all web threads to finish handling requests
     for handle in web_threads {
@@ -89,6 +89,6 @@ fn main() {
 
     // Wait for the background worker to finish processing the queue
     worker_handle.join().unwrap();
-    
+
     println!("\nSystem shut down cleanly.");
 }
