@@ -8,6 +8,7 @@ use snowflake_gen::SnowflakeGenerator;
 
 // This struct represents a row in our database
 #[derive(Debug)]
+#[allow(dead_code)]
 struct DatabaseRecord {
     internal_id: u64,
     data: String,
