@@ -24,9 +24,9 @@ mod tests {
         // k1 is oldest. Inserting k3 should evict k1.
         store.set("k3".to_string(), "v3".to_string(), None);
 
-        assert_eq!(store.get("k1"), None, "k1 should have been evicted via FIFO");
-        assert_eq!(store.get("k2"), Some("v2".to_string()));
-        assert_eq!(store.get("k3"), Some("v3".to_string()));
+        assert_eq!(store.get(&"k1".to_string()), None, "k1 should have been evicted via FIFO");
+        assert_eq!(store.get(&"k2".to_string()), Some("v2".to_string()));
+        assert_eq!(store.get(&"k3".to_string()), Some("v3".to_string()));
     }
 
     #[test]
@@ -37,14 +37,14 @@ mod tests {
         store.set("B".to_string(), "2".to_string(), None);
         
         // Access A, making B the least recently used
-        store.get("A");
+        store.get(&"A".to_string());
         
         // Insert C. B should be evicted because it is LRU.
         store.set("C".to_string(), "3".to_string(), None);
 
-        assert_eq!(store.get("B"), None, "B should have been evicted via LRU");
-        assert_eq!(store.get("A"), Some("1".to_string()));
-        assert_eq!(store.get("C"), Some("3".to_string()));
+        assert_eq!(store.get(&"B".to_string()), None, "B should have been evicted via LRU");
+        assert_eq!(store.get(&"A".to_string()), Some("1".to_string()));
+        assert_eq!(store.get(&"C".to_string()), Some("3".to_string()));
     }
 
     #[test]
@@ -55,18 +55,18 @@ mod tests {
         store.set("Y".to_string(), "20".to_string(), None);
         
         // Access Y twice (Frequency = 3: 1 insert + 2 gets)
-        store.get("Y");
-        store.get("Y");
+        store.get(&"Y".to_string());
+        store.get(&"Y".to_string());
         
         // Access X once (Frequency = 2: 1 insert + 1 get)
-        store.get("X");
+        store.get(&"X".to_string());
 
         // Insert Z. X has lower frequency (2) than Y (3), so X is evicted.
         store.set("Z".to_string(), "30".to_string(), None);
 
-        assert_eq!(store.get("X"), None, "X should have been evicted via LFU");
-        assert_eq!(store.get("Y"), Some("20".to_string()));
-        assert_eq!(store.get("Z"), Some("30".to_string()));
+        assert_eq!(store.get(&"X".to_string()), None, "X should have been evicted via LFU");
+        assert_eq!(store.get(&"Y".to_string()), Some("20".to_string()));
+        assert_eq!(store.get(&"Z".to_string()), Some("30".to_string()));
     }
 
     // ==========================================
@@ -80,12 +80,12 @@ mod tests {
         let mut store = KvStore::new(1, FifoPolicy::new());
         
         store.set("Mihir".to_string(), "Data Engineer".to_string(), None);
-        assert_eq!(store.get("Mihir"), Some("Data Engineer".to_string()));
+        assert_eq!(store.get(&"Mihir".to_string()), Some("Data Engineer".to_string()));
 
         // Setting a new key should instantly wipe the only existing key
         store.set("Rust".to_string(), "Awesome".to_string(), None);
-        assert_eq!(store.get("Mihir"), None);
-        assert_eq!(store.get("Rust"), Some("Awesome".to_string()));
+        assert_eq!(store.get(&"Mihir".to_string()), None);
+        assert_eq!(store.get(&"Rust".to_string()), Some("Awesome".to_string()));
     }
 
     #[test]
@@ -102,8 +102,8 @@ mod tests {
         // Insert k3. Because k1 was just updated, k2 is now the LRU.
         store.set("k3".to_string(), "v3".to_string(), None);
 
-        assert_eq!(store.get("k2"), None, "k2 should be evicted after k1 was updated");
-        assert_eq!(store.get("k1"), Some("v1_updated".to_string()));
+        assert_eq!(store.get(&"k2".to_string()), None, "k2 should be evicted after k1 was updated");
+        assert_eq!(store.get(&"k1".to_string()), Some("v1_updated".to_string()));
     }
 
     #[test]
@@ -114,13 +114,13 @@ mod tests {
         store.set("temp".to_string(), "data".to_string(), Some(Duration::from_millis(10)));
         
         // It should exist immediately
-        assert_eq!(store.get("temp"), Some("data".to_string()));
+        assert_eq!(store.get(&"temp".to_string()), Some("data".to_string()));
         
         // Sleep the thread for 15 milliseconds to force expiration
         sleep(Duration::from_millis(15));
         
         // The lazy evaluation should catch the dead key and return None
-        assert_eq!(store.get("temp"), None, "TTL expired key should be lazily deleted");
+        assert_eq!(store.get(&"temp".to_string()), None, "TTL expired key should be lazily deleted");
     }
 
     #[test]
@@ -129,7 +129,7 @@ mod tests {
         let mut store = KvStore::new(5, LfuPolicy::new());
         
         store.set("".to_string(), "".to_string(), None);
-        assert_eq!(store.get(""), Some("".to_string()));
+        assert_eq!(store.get(&"".to_string()), Some("".to_string()));
     }
 
     #[test]
@@ -138,19 +138,41 @@ mod tests {
         
         store.set("k1".to_string(), "v1".to_string(), None);
         
-        // Manually delete the key
-        store.delete("k1");
+        // Manually delete the key — on_delete now cleans the policy too!
+        store.delete(&"k1".to_string());
         
         // Assert it is gone
-        assert_eq!(store.get("k1"), None);
+        assert_eq!(store.get(&"k1".to_string()), None);
         
-        // Ensure that filling the cache again doesn't crash the policy
-        // even though the policy might have "k1" floating in its queue as a ghost
+        // With on_delete, the policy no longer has ghost keys.
+        // Filling the cache works cleanly.
         store.set("k2".to_string(), "v2".to_string(), None);
         store.set("k3".to_string(), "v3".to_string(), None);
         store.set("k4".to_string(), "v4".to_string(), None); // Triggers eviction
-        
-        assert_eq!(store.get("k4"), Some("v4".to_string()));
+
+        assert_eq!(store.get(&"k4".to_string()), Some("v4".to_string()));
+    }
+
+    #[test]
+    fn test_delete_cleans_policy() {
+        // Regression test: Proves that delete() removes the key from the policy,
+        // so eviction targets the correct victim (not a ghost).
+        let mut store = KvStore::new(2, FifoPolicy::new());
+
+        store.set("k1".to_string(), "v1".to_string(), None);
+        store.set("k2".to_string(), "v2".to_string(), None);
+
+        // Delete k1 — policy should forget it exists
+        store.delete(&"k1".to_string());
+
+        // Insert k3. With the ghost key fix, k2 is now the oldest
+        // key in the policy, so k2 should be evicted.
+        store.set("k3".to_string(), "v3".to_string(), None);
+        store.set("k4".to_string(), "v4".to_string(), None); // Triggers eviction of k2
+
+        assert_eq!(store.get(&"k2".to_string()), None, "k2 should be evicted, not ghost k1");
+        assert_eq!(store.get(&"k3".to_string()), Some("v3".to_string()));
+        assert_eq!(store.get(&"k4".to_string()), Some("v4".to_string()));
     }
 
     #[test]
@@ -199,16 +221,45 @@ mod tests {
         // 4. Verify the data survived the concurrent onslaught
         // We randomly check a few keys to prove they were successfully written and retained
         assert_eq!(
-            store.get("agent_3_token_50"), 
+            store.get(&"agent_3_token_50".to_string()), 
             Some("active_time_50".to_string())
         );
         assert_eq!(
-            store.get("agent_9_token_99"), 
+            store.get(&"agent_9_token_99".to_string()), 
             Some("active_time_99".to_string())
         );
         assert_eq!(
-            store.get("agent_0_token_0"), 
+            store.get(&"agent_0_token_0".to_string()), 
             Some("active_time_0".to_string())
         );
+    }
+
+    #[test]
+    fn test_concurrent_reads_dont_block() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        // Initialize the split-lock store and pre-populate with a key
+        let store = ConcurrentKvStore::new(100, FifoPolicy::new());
+        store.set("shared".to_string(), "data".to_string(), None);
+
+        // Create a Barrier that forces all 10 threads to start simultaneously.
+        // This maximizes the chance of truly concurrent reads.
+        let barrier = Arc::new(Barrier::new(10));
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let s = store.clone();
+            let b = barrier.clone();
+            handles.push(thread::spawn(move || {
+                b.wait(); // All 10 threads start at the exact same moment
+                s.get(&"shared".to_string()) // All should succeed concurrently
+            }));
+        }
+
+        // All 10 threads should return the same value without deadlocking
+        for h in handles {
+            assert_eq!(h.join().unwrap(), Some("data".to_string()));
+        }
     }
 }
