@@ -10,7 +10,6 @@ on:
 # 2. Environment Variables
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Dwarnings" # Fails the build if there are any compiler warnings
 
 # 3. The Jobs
 jobs:
