@@ -24,3 +24,14 @@
 .vscode/
 *.swp
 *.swo
+
+# AI tooling — planning files, agent context, generated docs
+.gemini/
+.cursor/
+.copilot/
+
+# Dream system staging (temporary, auto-generated)
+.agents/transcripts/
+
+# Obsidian vault config (personal, not shareable)
+.agents/brain/.obsidian/
