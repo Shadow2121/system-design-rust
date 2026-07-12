@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "consistent_hash"
+version = "0.1.0"
+
+[[package]]
 name = "kv_store"
 version = "0.1.0"
 

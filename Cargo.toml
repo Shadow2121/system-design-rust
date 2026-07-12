@@ -1,8 +1,9 @@
 [workspace]
 
-members = ["kv_store",
-    "snowflake_gen",
+members = [
     "kv_store",
+    "snowflake_gen",
+    "consistent_hash",
 ]
 
 [profile.release]

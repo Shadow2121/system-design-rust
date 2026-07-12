@@ -15,3 +15,11 @@ Industry context: Production caches use lock-free HashMaps + ring buffers (like 
 
 ### Update from transcript 5914962c-1bb8-4e24-801f-8e84349117b1
 - Audited the current implementation and classified it as an embedded cache engine, not a full KV store yet. Practical for rate limiting or memoization.
+
+### Update from transcript 1400a764-7e5b-4660-a54a-393596d48641
+- Implemented arena-based O(1) LRU and LFU policies with safe doubly linked lists.
+- Fixed phantom eviction bug by adding `on_delete` to the policy trait.
+- Completed split-lock architecture refactor (RwLock data + Mutex policy).
+- Made store fully generic over `<K, V>`.
+- All changes committed as `refactor: implement O(1) arena-based policies and split-lock concurrency`.
+
