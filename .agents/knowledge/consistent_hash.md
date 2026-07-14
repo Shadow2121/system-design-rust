@@ -20,3 +20,13 @@ Key details:
 - Set default vnodes to 150 per physical node.
 - Created 6 integration tests proving determinism, even distribution, minimal key movement, replica uniqueness, graceful degradation, and empty ring safety.
 - Added `INTERNAL_REFERENCE.md` documenting all architecture decisions.
+
+### Update from transcript a742bbfa-0bbf-4b12-ae34-1dcbf1e3ea17
+- Reviewed and verified the implementation of the `consistent_hash` crate.
+- Analyzed integration tests demonstrating determinism, O(log N) search complexity, key distribution, minimal key movement, and safe handling of empty rings.
+- Explained the `remove_node` implementation leveraging Rust's `Vec::retain` for in-place compaction.
+
+### Update from transcript a9bd1fd7-6c65-4e62-a0a1-703221ade479
+- Committed the `consistent_hash` crate code, documentation, and tests to the `p-consistent-hash` git branch.
+- Detailed the design choices, internal structures, virtual node mapping, and replica collection logic for smart client routing.
+- Documented public API usage examples (`new`, `add_node`, `remove_node`, `get_node`, `get_replicas`).

@@ -4,6 +4,7 @@ members = [
     "kv_store",
     "snowflake_gen",
     "consistent_hash",
+    "gossip",
 ]
 
 [profile.release]
